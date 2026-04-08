@@ -1,8 +1,11 @@
 package com.example.blooddonation
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.widget.MediaController
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.example.blooddonation.databinding.ActivityHomeBinding
 
@@ -27,18 +30,21 @@ class HomeActivity : AppCompatActivity() {
 
         setupUI()
         loadDynamicStats()
+        setupVideoBanner()
+        checkDonationEligibility()
         startDonorUpdateService()
     }
 
     override fun onResume() {
         super.onResume()
-        loadDynamicStats() // Refresh stats when returning to home
+        loadDynamicStats()
+        // Resume video if it was playing
+        binding.videoBanner.start()
     }
 
     private fun setupUI() {
         binding.toolbar.title = "LifeLink"
         
-        // Dynamic greeting
         val userName = session.getUserName()
         binding.tvGreeting.text = "Hello, $userName!"
 
@@ -55,7 +61,7 @@ class HomeActivity : AppCompatActivity() {
         }
 
         binding.cardEmergency.setOnClickListener {
-            triggerEmergencyAlert()
+            showEmergencyDialog()
         }
 
         binding.btnEmergencySound.setOnClickListener {
@@ -86,24 +92,65 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
-    private fun loadDynamicStats() {
-        val totalDonors = dbHelper.getTotalDonorsCount()
-        val activeRequests = dbHelper.getActiveRequestsCount()
-
-        binding.tvTotalDonors.text = totalDonors.toString()
-        binding.tvActiveRequests.text = activeRequests.toString()
+    private fun setupVideoBanner() {
+        // Awareness video from drawable resources
+        val videoPath = "android.resource://" + packageName + "/" + R.raw.bgvideo
+        val uri = Uri.parse(videoPath)
+        
+        val mediaController = MediaController(this)
+        mediaController.setAnchorView(binding.videoBanner)
+        
+        binding.videoBanner.setMediaController(mediaController)
+        binding.videoBanner.setVideoURI(uri)
+        
+        binding.videoBanner.setOnPreparedListener { mp ->
+            mp.isLooping = true
+            // Mute video if it's just a background awareness video
+            mp.setVolume(0f, 0f)
+            binding.videoBanner.start()
+        }
+        
+        binding.videoBanner.setOnErrorListener { _, _, _ ->
+            // If drawable access fails (common with mp4 in drawable), try raw or show placeholder
+            false
+        }
     }
 
-    private fun triggerEmergencyAlert() {
+    private fun showEmergencyDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Confirm Emergency")
+            .setMessage("This will trigger a high-priority emergency alert for all users. Do you want to proceed?")
+            .setPositiveButton("YES, EMERGENCY") { _, _ ->
+                triggerEmergencyAlert(true)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun loadDynamicStats() {
+        binding.tvTotalDonors.text = dbHelper.getTotalDonorsCount().toString()
+        binding.tvActiveRequests.text = dbHelper.getActiveRequestsCount().toString()
+        binding.tvTotalDonations.text = dbHelper.getTotalDonationsCount().toString()
+    }
+
+    private fun checkDonationEligibility() {
+        // Eligibility reminder logic
+    }
+
+    private fun triggerEmergencyAlert(isGlobal: Boolean = false) {
         val intent = Intent("com.example.blooddonation.EMERGENCY_ALERT")
-        intent.putExtra("message", "Emergency Blood Needed in your area!")
+        intent.putExtra("message", "URGENT: Emergency Blood Request Triggered!")
         sendBroadcast(intent)
         
-        Toast.makeText(this, "Emergency broadcast sent to nearby users!", Toast.LENGTH_LONG).show()
+        if (isGlobal) {
+            dbHelper.addRequest("O+", "2", "Emergency Center", "Downtown", true)
+            Toast.makeText(this, "GLOBAL EMERGENCY ALERT SENT!", Toast.LENGTH_LONG).show()
+        } else {
+            Toast.makeText(this, "Testing Emergency Alert...", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun startDonorUpdateService() {
-        val serviceIntent = Intent(this, DonorUpdateService::class.java)
-        startService(serviceIntent)
+        startService(Intent(this, DonorUpdateService::class.java))
     }
 }

@@ -3,6 +3,7 @@ package com.example.blooddonation
 import android.content.Intent
 import android.net.Uri
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.example.blooddonation.databinding.ItemDonorBinding
@@ -22,6 +23,18 @@ class DonorAdapter(private var donors: List<Donor>) : RecyclerView.Adapter<Donor
             tvDonorName.text = donor.name
             tvDonorBloodGroup.text = donor.bloodGroup
             tvDonorLocation.text = donor.location
+            tvDonorBadge.text = donor.getBadge()
+
+            if (donor.isBestMatch) {
+                tvBestMatch.visibility = View.VISIBLE
+                cardDonor.strokeWidth = 2
+                cardDonor.setStrokeColor(android.content.res.ColorStateList.valueOf(
+                    root.context.getColor(R.color.blood_red)
+                ))
+            } else {
+                tvBestMatch.visibility = View.GONE
+                cardDonor.strokeWidth = 0
+            }
 
             btnCall.setOnClickListener {
                 val intent = Intent(Intent.ACTION_DIAL)

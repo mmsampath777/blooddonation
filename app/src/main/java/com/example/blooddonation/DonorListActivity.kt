@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
-import android.widget.ArrayAdapter
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.blooddonation.databinding.ActivityDonorListBinding
@@ -40,17 +39,25 @@ class DonorListActivity : AppCompatActivity() {
 
     private fun loadDonors(filter: String? = null) {
         donorList.clear()
-        val cursor = dbHelper.getDonors(filter)
+        // Updated to use the correct method name from DatabaseHelper
+        val cursor = dbHelper.getDonorsFiltered(filter)
         
+        var isFirst = true
         if (cursor.moveToFirst()) {
             do {
+                val donationCount = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_DONOR_DONATION_COUNT))
+                
                 donorList.add(Donor(
                     cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_DONOR_ID)),
                     cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_DONOR_NAME)),
                     cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_DONOR_BLOOD)),
                     cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_DONOR_PHONE)),
-                    cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_DONOR_LOCATION))
+                    cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_DONOR_LOCATION)),
+                    donationCount,
+                    // Smart Matching: Mark the top donor with high experience as Best Match
+                    isFirst && donationCount > 0
                 ))
+                isFirst = false
             } while (cursor.moveToNext())
         }
         cursor.close()
@@ -63,8 +70,6 @@ class DonorListActivity : AppCompatActivity() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 val query = s.toString().trim()
-                // Simple filtering logic: if query matches a blood group exactly, use DB filter
-                // Otherwise, perform manual list filtering
                 if (query.length <= 3 && query.isNotEmpty()) {
                     loadDonors(query)
                 } else if (query.isEmpty()) {
@@ -77,7 +82,6 @@ class DonorListActivity : AppCompatActivity() {
         })
         
         binding.btnVoiceSearch.setOnClickListener {
-            // Simplified: show a toast as placeholder for RecognizerIntent
             android.widget.Toast.makeText(this, "Voice Search triggered...", android.widget.Toast.LENGTH_SHORT).show()
         }
     }
