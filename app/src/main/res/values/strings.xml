@@ -1,0 +1,24 @@
+<resources>
+    <string name="app_name">LifeLink</string>
+    <string name="tagline">Donate Blood, Save Lives</string>
+    <string name="login">Login</string>
+    <string name="register">Register</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="full_name">Full Name</string>
+    <string name="phone_number">Phone Number</string>
+    <string name="blood_group">Blood Group</string>
+    <string name="location">Location</string>
+    <string name="find_donors">Find Donors</string>
+    <string name="request_blood">Request Blood</string>
+    <string name="hospitals">Hospitals</string>
+    <string name="emergency">Emergency</string>
+    <string name="units_required">Units Required</string>
+    <string name="hospital_name">Hospital Name</string>
+    <string name="submit_request">Submit Request</string>
+    <string name="notifications">Notifications</string>
+    <string name="profile">Profile</string>
+    <string name="availability">Availability</string>
+    <string name="donation_history">Donation History</string>
+    <string name="logout">Logout</string>
+</resources>
