@@ -24,13 +24,10 @@ class LoginActivity : AppCompatActivity() {
             val pass = binding.etPassword.text.toString().trim()
 
             if (email.isNotEmpty() && pass.isNotEmpty()) {
-                val cursor = dbHelper.loginUser(email, pass)
-                if (cursor != null && cursor.moveToFirst()) {
-                    val name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_USER_NAME))
-                    session.createLoginSession(email, name)
-                    cursor.close()
-                    
-                    Toast.makeText(this, "Welcome, $name!", Toast.LENGTH_SHORT).show()
+                val user = dbHelper.loginUser(email, pass)
+                if (user != null) {
+                    session.createLoginSession(email, user.name)
+                    Toast.makeText(this, "Welcome, ${user.name}!", Toast.LENGTH_SHORT).show()
                     startActivity(Intent(this, HomeActivity::class.java))
                     finish()
                 } else {

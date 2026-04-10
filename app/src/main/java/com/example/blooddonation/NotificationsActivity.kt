@@ -8,28 +8,33 @@ import com.example.blooddonation.databinding.ActivityNotificationsBinding
 
 class NotificationsActivity : AppCompatActivity() {
     private lateinit var binding: ActivityNotificationsBinding
+    private lateinit var dbHelper: DatabaseHelper
+    private lateinit var adapter: NotificationAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityNotificationsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        dbHelper = DatabaseHelper(this)
+        
         binding.toolbarNotifications.setNavigationOnClickListener { finish() }
 
         setupRecyclerView()
+        loadRequests()
     }
 
     private fun setupRecyclerView() {
-        val notifications = listOf(
-            NotificationItem("Emergency: O+ Needed", "A request has been made near you at City Hospital.", "2 mins ago", true),
-            NotificationItem("Donation Reminder", "It's been 3 months since your last donation. Ready to save another life?", "1 day ago"),
-            NotificationItem("New Donor Nearby", "John Doe just registered in your area.", "2 days ago")
-        )
-
+        adapter = NotificationAdapter(mutableListOf(), dbHelper)
         binding.rvNotifications.layoutManager = LinearLayoutManager(this)
-        binding.rvNotifications.adapter = NotificationAdapter(notifications)
+        binding.rvNotifications.adapter = adapter
+    }
 
-        if (notifications.isEmpty()) {
+    private fun loadRequests() {
+        val requests = dbHelper.getRequests()
+        adapter.updateData(requests)
+        
+        if (requests.isEmpty()) {
             binding.emptyNotifications.visibility = View.VISIBLE
             binding.rvNotifications.visibility = View.GONE
         } else {

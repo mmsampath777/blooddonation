@@ -1,18 +1,34 @@
 package com.example.blooddonation
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
+import android.speech.RecognizerIntent
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.blooddonation.databinding.ActivityDonorListBinding
+import java.util.*
 
 class DonorListActivity : AppCompatActivity() {
     private lateinit var binding: ActivityDonorListBinding
     private lateinit var dbHelper: DatabaseHelper
-    private var donorList = mutableListOf<Donor>()
     private lateinit var adapter: DonorAdapter
+
+    private val voiceSearchLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            val results = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+            if (!results.isNullOrEmpty()) {
+                val spokenText = results[0]
+                binding.etSearchDonor.setText(spokenText)
+                filterList(spokenText)
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,70 +48,55 @@ class DonorListActivity : AppCompatActivity() {
     }
 
     private fun setupRecyclerView() {
-        adapter = DonorAdapter(donorList)
+        adapter = DonorAdapter(mutableListOf())
         binding.rvDonors.layoutManager = LinearLayoutManager(this)
         binding.rvDonors.adapter = adapter
     }
 
-    private fun loadDonors(filter: String? = null) {
-        donorList.clear()
-        // Updated to use the correct method name from DatabaseHelper
-        val cursor = dbHelper.getDonorsFiltered(filter)
-        
-        var isFirst = true
-        if (cursor.moveToFirst()) {
-            do {
-                val donationCount = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_DONOR_DONATION_COUNT))
-                
-                donorList.add(Donor(
-                    cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_DONOR_ID)),
-                    cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_DONOR_NAME)),
-                    cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_DONOR_BLOOD)),
-                    cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_DONOR_PHONE)),
-                    cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_DONOR_LOCATION)),
-                    donationCount,
-                    // Smart Matching: Mark the top donor with high experience as Best Match
-                    isFirst && donationCount > 0
-                ))
-                isFirst = false
-            } while (cursor.moveToNext())
+    private fun loadDonors() {
+        val donors = dbHelper.getDonorsFiltered()
+        val processedList = donors.mapIndexed { index, donor ->
+            donor.copy(isBestMatch = index == 0 && donor.donationCount > 0)
         }
-        cursor.close()
-
-        updateUIState()
+        adapter.updateData(processedList)
+        updateUIState(processedList.isEmpty())
     }
 
     private fun setupSearch() {
         binding.etSearchDonor.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                val query = s.toString().trim()
-                if (query.length <= 3 && query.isNotEmpty()) {
-                    loadDonors(query)
-                } else if (query.isEmpty()) {
-                    loadDonors()
-                } else {
-                    filterListManually(query)
-                }
+                filterList(s.toString().trim())
             }
             override fun afterTextChanged(s: Editable?) {}
         })
         
         binding.btnVoiceSearch.setOnClickListener {
-            android.widget.Toast.makeText(this, "Voice Search triggered...", android.widget.Toast.LENGTH_SHORT).show()
+            startVoiceRecognition()
         }
     }
 
-    private fun filterListManually(query: String) {
-        val filtered = donorList.filter { 
-            it.name.contains(query, ignoreCase = true) || it.location.contains(query, ignoreCase = true) 
+    private fun startVoiceRecognition() {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak blood group or location...")
         }
-        adapter.updateData(filtered)
-        updateUIState(filtered.isEmpty())
+        try {
+            voiceSearchLauncher.launch(intent)
+        } catch (e: Exception) {
+            Toast.makeText(this, "Voice search not supported", Toast.LENGTH_SHORT).show()
+        }
     }
 
-    private fun updateUIState(isEmptyOverride: Boolean? = null) {
-        val isEmpty = isEmptyOverride ?: donorList.isEmpty()
+    private fun filterList(query: String) {
+        adapter.filter.filter(query)
+        binding.rvDonors.postDelayed({
+            updateUIState(adapter.itemCount == 0)
+        }, 100)
+    }
+
+    private fun updateUIState(isEmpty: Boolean) {
         if (isEmpty) {
             binding.emptyState.visibility = View.VISIBLE
             binding.rvDonors.visibility = View.GONE
@@ -103,6 +104,5 @@ class DonorListActivity : AppCompatActivity() {
             binding.emptyState.visibility = View.GONE
             binding.rvDonors.visibility = View.VISIBLE
         }
-        adapter.notifyDataSetChanged()
     }
 }

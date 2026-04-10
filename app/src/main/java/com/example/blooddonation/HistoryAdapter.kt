@@ -5,7 +5,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.example.blooddonation.databinding.ItemDonationHistoryBinding
 
-class HistoryAdapter(private val history: List<DonationHistory>) : RecyclerView.Adapter<HistoryAdapter.HistoryViewHolder>() {
+class HistoryAdapter(private var history: List<DatabaseHelper.DonationRecord>) : RecyclerView.Adapter<HistoryAdapter.HistoryViewHolder>() {
 
     class HistoryViewHolder(val binding: ItemDonationHistoryBinding) : RecyclerView.ViewHolder(binding.root)
 
@@ -24,4 +24,9 @@ class HistoryAdapter(private val history: List<DonationHistory>) : RecyclerView.
     }
 
     override fun getItemCount() = history.size
+
+    fun updateData(newList: List<DatabaseHelper.DonationRecord>) {
+        this.history = newList
+        notifyDataSetChanged()
+    }
 }

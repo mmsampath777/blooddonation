@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.google.services)
 }
 
 android {
@@ -45,6 +46,18 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.recyclerview)
     implementation(libs.androidx.cardview)
+
+    // Firebase
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.database)
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.storage)
+
+    // Location
+    implementation(libs.play.services.location)
+
+    // Image Loading
+    implementation("com.github.bumptech.glide:glide:4.16.0")
     
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
